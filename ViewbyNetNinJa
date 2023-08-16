@@ -1,1 +1,84 @@
+const express = require('express');
+const path =require ('path');
+const morgan = require('morgan');
+const mongoose = require('mongoose');
+const { result } = require('lodash');
+const { render } = require('ejs');
 
+
+const app = express();
+//connect to MongoDB
+const dbURL= 'mongodb+srv://hdung7903:dev@cluster0.pkk4fgr.mongodb.net/';
+mongoose.connect(dbURL, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => {
+    console.log('Connected to the database successfully');
+  })
+  .catch((err) => {
+    console.error('Error connecting to the database:', err);
+  });
+//regis view engine
+app.set('view engine','ejs');
+app.use(express.urlencoded({extended:true}));
+
+app.listen (3000);
+//middleware & static file
+app.use(express.static(path.join(__dirname, 'public')));
+// app.use(express.static('public'));
+app.use(morgan('dev'));
+
+ //Normal route
+// app.get('/home', (req,res)=>{
+//     res.sendFile('./views/html/home.html',{root: __dirname});
+// })
+app.get('/login', (req,res)=>{
+    res.render('index',{titlePage: "Login Page" });
+})
+//Redirect route
+app.get('/about', (req,res)=>{
+    res.redirect('/home'),{titlePage:"Redirect Page"};
+})
+app.get('add-blog',(req,res)=>{
+    const blog = new Blog ({
+        title:'new blog',
+        snippet:'about my new blog',
+        body:'more about my blog',
+    });
+
+    blog.save();
+})
+app.post('/blogs',(req,res)=>{
+    const blog= new Blog(req.body);
+
+    blog.save()
+    .then((result)=>{
+        res.redirect('/home');
+    })
+    .catch((err)=>{
+        console.log(err);
+    })
+})
+//make route using params
+app.get('/blog/:id',(req,res)=>{
+    const id= req.params.id;
+    Blog.findbyId(id)
+    .then(result=>{
+       res.render('details', {blog: result, title: 'Blog Details'})
+    })
+    .catch(err=>{
+        console.log(err);
+    })
+})
+app.delete('/blogs/:id',(req,res)=>{
+    const id= req.params.id;
+    Blog.findbyId(id)
+    .then(result=>{
+        res.json({redirect:'/blogs'});
+     })
+     .catch(err=>{
+         console.log(err);
+})
+})
+//Error route
+app.use((req,res)=>{
+    res.status(404).render('error',{titlePage:"Error!"});
+})
